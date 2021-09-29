@@ -6,22 +6,25 @@ const app = express()
 const port = process.env.PORT || 80
 
 app.use(express.static('static'))
-app.use(express.urlencoded({extended: true}))
+app.use(express.json())
 
-app.post('/download', function(request, responce) {
-    if (!request.body && !request.body.link) return responce.sendStatus(404)
-    let link = 'https://youtu.be/' + request.body.link
-    let validURL = ytdl.validateURL(link)
+app.post('/youtube', async function(request, responce) {
+    if (!request.body && !request.body.videoId) return responce.sendStatus(404)
+    let body = request.body
+    let videoId = 'https://youtu.be/' + body.videoId
+    let validURL = ytdl.validateURL(videoId)
     if (validURL) {
-        let video = ytdl(link, {quality: 247}) // only 720p webm
-        let audio = ytdl(link, {quality: 'highestaudio'})
-        
+        console.log('downloading ' + videoId)
+        let video = ytdl(videoId, {quality: 247}) // only 720p webm
+        let audio = ytdl(videoId, {quality: 'highestaudio'})
+        let info = await ytdl.getInfo(videoId)
         const ffmpegProcess = childProcess.spawn(ffmpeg, [
             '-loglevel', '8', '-hide_banner',
             '-i', 'pipe:3',
             '-i', 'pipe:4',
             '-map', '0:v',
             '-map', '1:a',
+            '-metadata','duration=' + info.videoDetails.lengthSeconds,
             '-c:v', 'copy',
             '-f', "webm",
             'pipe:5',
@@ -32,15 +35,13 @@ app.post('/download', function(request, responce) {
                 'pipe', 'pipe', 'pipe',
             ],
         })
-        console.log('downloading ' + link)
         video.pipe(ffmpegProcess.stdio[3])
         audio.pipe(ffmpegProcess.stdio[4])
         ffmpegProcess.stdio[5].pipe(responce)
         ffmpegProcess.on('close', () => {
-            console.log('downloaded ' + link)
+            console.log('downloaded ' + videoId)
         })
     } else {
-        console.log('failed to download ' + link)
         responce.sendStatus(404)
     }
 })
