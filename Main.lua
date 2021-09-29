@@ -17,7 +17,7 @@ local Settings = {
 	Sliding = false,
 	Expand = false,
 	DefaultSize = Window.Size,
-	Domain = "http://localhost"
+	Domain = "https://alexserver.herokuapp.com"
 }
 
 local function Request(videoId)
