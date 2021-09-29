@@ -1,4 +1,5 @@
 local UserInputService = game:GetService("UserInputService")
+local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
 local CoreGui = game:GetService("CoreGui")
 
@@ -9,6 +10,29 @@ local ControlPanel = Window.ControlPanel
 
 if not isfolder("videos") then
 	makefolder("videos")
+end
+
+local Settings = {
+	Playing = false,
+	Sliding = false,
+	Expand = false,
+	DefaultSize = Window.Size,
+	Domain = "http://localhost"
+}
+
+local function Request(videoId)
+	local responce = syn.request({
+		Url = Settings.Domain .. "/youtube",
+		Method = "POST",
+		Headers = {
+			["Content-Type"] = "application/json"
+		},
+		Body = HttpService:JSONEncode({
+			["videoId"] = videoId,
+		})
+	})
+	if responce.StatusCode == 404 then return false end
+	return responce.Body
 end
 
 local function MakeDraggable(ClickObject, Object)
@@ -77,17 +101,23 @@ local function MakeResizeable(ClickObject,Object,MinSizeX,MinSizeY)
 	end)
 end
 
-local Settings = {
-	Playing = false,
-	Sliding = false,
-	Expand = false,
-	DefaultSize = Window.Size,
-	VideoHost = "https://alexserver.herokuapp.com/download"
-}
+local function UpdateTime()
+	local TimePosition = Window.Video.TimePosition
+	
+	Window.Playback.Time.Text = string.format("%02i:%02i:%02i", TimePosition/60^2, TimePosition/60%60, TimePosition%60)
+end
 
 local function UpdateLength()
-	local Length = Window.Video.TimeLength
-	Window.Playback.Length.Text = string.format("%02i:%02i:%02i", Length/60^2, Length/60%60, Length%60)
+	local TimeLength = Window.Video.TimeLength
+	print(TimeLength)
+	Window.Playback.Length.Text = string.format("%02i:%02i:%02i", TimeLength/60^2, TimeLength/60%60, TimeLength%60)
+end
+
+local function UpdatePlayback()
+	local TimePosition = Window.Video.TimePosition
+	local TimeLength = Window.Video.TimeLength
+	local TimePercent = TimePosition / TimeLength
+	Window.Playback.Line.Size = UDim2.new(TimePercent,0,1,0)
 end
 
 local function PlayVideo()
@@ -95,7 +125,6 @@ local function PlayVideo()
 	if Settings.Playing then
 		ControlPanel.Play.ImageRectOffset = Vector2.new(804,124)
 		Window.Video:Play()
-		UpdateLength()
 	else
 		ControlPanel.Play.ImageRectOffset = Vector2.new(764,244)
 		Window.Video:Pause()
@@ -103,78 +132,70 @@ local function PlayVideo()
 end
 
 local function Expand()
-	Settings.Expand = not Settings.Expand
-	if Settings.Expand then
-		Settings.DefaultSize = Window.Size
-		ControlPanel.Expand.ImageRectOffset = Vector2.new(244, 204)
-		Window.Size = UDim2.new(0,Window.Video.Resolution.X + 10,0,Window.Video.Resolution.Y + 100)
-		Window.Resize.Visible = false
-	else
-		ControlPanel.Expand.ImageRectOffset = Vector2.new(724, 204)
-		Window.Size = Settings.DefaultSize
-		Window.Resize.Visible = true
+	if Window.Video.Resolution.X >= 300 and Window.Video.Resolution.Y >= 300 then
+		Settings.Expand = not Settings.Expand
+		if Settings.Expand then
+			Settings.DefaultSize = Window.Size
+			ControlPanel.Expand.ImageRectOffset = Vector2.new(244, 204)
+			Window.Size = UDim2.new(0,Window.Video.Resolution.X + 10,0,Window.Video.Resolution.Y + 100)
+			Window.Resize.Visible = false
+		else
+			ControlPanel.Expand.ImageRectOffset = Vector2.new(724, 204)
+			Window.Size = Settings.DefaultSize
+			Window.Resize.Visible = true
+		end
 	end
-end
-
-local function DownloadWEBM(Url)
-	local responce = syn.request({
-		Url = Settings.VideoHost,
-		Method = "POST",
-		Body = "link=" .. Url
-	})
-	if responce.StatusCode == 404 then return false end
-	return responce.Body
 end
 
 local function LoadVideo(Enter)
 	if Enter then
-        local Link = ControlPanel.LinkInput.Text
-        if not isfile("videos/" .. Link .. ".webm") then
-            Window.Title.Text = "Videoplayer - videos/" .. Link .. ".webm"
+        local VideoId = ControlPanel.LinkInput.Text
+        if not isfile("videos/" .. VideoId .. ".webm") then
             ControlPanel.LinkInput.Text = ""
             ControlPanel.LinkInput.PlaceholderText = "VideoID (Loading)"
-            local Video = DownloadWEBM(Link)
+            local Video = Request(VideoId)
 			if Video then
-				writefile("videos/" .. Link .. ".webm", Video)
-				Window.Video.Video = getsynasset("videos/" .. Link .. ".webm")
+				writefile("videos/" .. VideoId .. ".webm", Video)
+				Window.Video.Video = getsynasset("videos/" .. VideoId .. ".webm")
+				Window.Title.Text = "Videoplayer - videos/" .. VideoId .. ".webm"
 				ControlPanel.LinkInput.PlaceholderText = "VideoID"
-				PlayVideo()
+
+				Settings.Playing = true
+				ControlPanel.Play.ImageRectOffset = Vector2.new(804,124)
+				Window.Video:Play()
 			else
 				ControlPanel.LinkInput.PlaceholderText = "VideoID (Failed)"
+				Window.Title.Text = "Videoplayer"
+				Window.Video.Video = ""
 			end
         else
-            Window.Title.Text = "Videoplayer - videos/" .. Link .. ".webm"
             ControlPanel.LinkInput.Text = ""
-            Window.Video.Video = getsynasset("videos/" .. Link .. ".webm")
+            Window.Video.Video = getsynasset("videos/" .. VideoId .. ".webm")
+			Window.Title.Text = "Videoplayer - videos/" .. VideoId .. ".webm"
             ControlPanel.LinkInput.PlaceholderText = "VideoID"
-			PlayVideo()
+
+			Settings.Playing = true
+			ControlPanel.Play.ImageRectOffset = Vector2.new(804,124)
+			Window.Video:Play()
         end
 	end
 end
 
 local function Slide(Input)
+	local Length = Window.Video.TimeLength
 	local Size = UDim2.new(math.clamp((Input.Position.X - Window.Playback.AbsolutePosition.X) / Window.Playback.AbsoluteSize.X,0,1),0,1,0)
+	local TimePosition = ((Size.X.Scale * Length) / Length) * (Length - 0) + 0
 	Window.Playback.Line.Size = Size
-	local TimePosition = ((Size.X.Scale * Window.Video.TimeLength) / Window.Video.TimeLength) * (Window.Video.TimeLength - 0) + 0
 	Window.Video.TimePosition = TimePosition
-end
-
-local function UpdateTime()
-	local Time = Window.Video.TimePosition
-	Window.Playback.Time.Text = string.format("%02i:%02i:%02i", Time/60^2, Time/60%60, Time%60)
-end
-local function UpdatePlayback()
-	local TimePercent = Window.Video.TimePosition / Window.Video.TimeLength
-	Window.Playback.Line.Size = UDim2.new(TimePercent,0,1,0)
 end
 
 ControlPanel.Play.MouseButton1Click:Connect(PlayVideo)
 ControlPanel.Expand.MouseButton1Click:Connect(Expand)
 ControlPanel.LinkInput.FocusLost:Connect(LoadVideo)
-
+Window.Video.Loaded:Connect(UpdateLength)
 Window.Video.Ended:Connect(function()
-	Window.Video.TimePosition = 0
 	Settings.Playing = false
+	Window.Video.TimePosition = 0
 	ControlPanel.Play.ImageRectOffset = Vector2.new(764,244)
 end)
 
@@ -187,8 +208,8 @@ end)
 
 Window.Playback.Slider.InputEnded:Connect(function(Input)
 	if Input.UserInputType == Enum.UserInputType.MouseButton1 then
-		Settings.Sliding = false
 		Settings.Playing = true
+		Settings.Sliding = false
 		ControlPanel.Play.ImageRectOffset = Vector2.new(804,124)
 		Window.Video:Play()
 	end
