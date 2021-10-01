@@ -4,8 +4,10 @@ local RunService = game:GetService("RunService")
 local CoreGui = game:GetService("CoreGui")
 
 local Screen = game:GetObjects("rbxassetid://7563729664")[1]
+
 Screen.Parent = CoreGui
 local Window = Screen.Window
+local MenuWindow = Window.MenuWindow
 local ControlPanel = Window.ControlPanel
 
 if not isfolder("videos") then
@@ -14,7 +16,6 @@ end
 
 local Settings = {
 	Playing = false,
-	Sliding = false,
 	Expand = false,
 	DefaultSize = Window.Size,
 	Domain = "https://alexserver.herokuapp.com"
@@ -101,15 +102,24 @@ local function MakeResizeable(ClickObject,Object,MinSizeX,MinSizeY)
 	end)
 end
 
+local function ChangeTimePosition()
+	local Length = Window.Video.TimeLength
+	local Size = UDim2.new(math.clamp((UserInputService:GetMouseLocation().X - Window.Playback.AbsolutePosition.X) / Window.Playback.AbsoluteSize.X,0,1),0,1,0)
+	local TimePosition = ((Size.X.Scale * Length) / Length) * (Length - 0) + 0
+	Window.Playback.Line.Size = Size
+	Window.Video.TimePosition = TimePosition
+	Settings.Playing = true
+	ControlPanel.Play.ImageRectOffset = Vector2.new(804,124)
+	Window.Video:Play()
+end
+
 local function UpdateTime()
 	local TimePosition = Window.Video.TimePosition
-	
 	Window.Playback.Time.Text = string.format("%02i:%02i:%02i", TimePosition/60^2, TimePosition/60%60, TimePosition%60)
 end
 
 local function UpdateLength()
 	local TimeLength = Window.Video.TimeLength
-	print(TimeLength)
 	Window.Playback.Length.Text = string.format("%02i:%02i:%02i", TimeLength/60^2, TimeLength/60%60, TimeLength%60)
 end
 
@@ -137,7 +147,7 @@ local function Expand()
 		if Settings.Expand then
 			Settings.DefaultSize = Window.Size
 			ControlPanel.Expand.ImageRectOffset = Vector2.new(244, 204)
-			Window.Size = UDim2.new(0,Window.Video.Resolution.X + 10,0,Window.Video.Resolution.Y + 100)
+			Window.Size = UDim2.new(0,Window.Video.Resolution.X + 10,0,Window.Video.Resolution.Y + 115)
 			Window.Resize.Visible = false
 		else
 			ControlPanel.Expand.ImageRectOffset = Vector2.new(724, 204)
@@ -149,30 +159,30 @@ end
 
 local function LoadVideo(Enter)
 	if Enter then
-        local VideoId = ControlPanel.LinkInput.Text
+        local VideoId = MenuWindow.LinkInput.Text
         if not isfile("videos/" .. VideoId .. ".webm") then
-            ControlPanel.LinkInput.Text = ""
-            ControlPanel.LinkInput.PlaceholderText = "VideoID (Loading)"
+            MenuWindow.LinkInput.Text = ""
+            MenuWindow.LinkInput.PlaceholderText = "VideoID (Loading)"
             local Video = Request(VideoId)
 			if Video then
 				writefile("videos/" .. VideoId .. ".webm", Video)
 				Window.Video.Video = getsynasset("videos/" .. VideoId .. ".webm")
 				Window.Title.Text = "Videoplayer - videos/" .. VideoId .. ".webm"
-				ControlPanel.LinkInput.PlaceholderText = "VideoID"
+				MenuWindow.LinkInput.PlaceholderText = "VideoID"
 
 				Settings.Playing = true
 				ControlPanel.Play.ImageRectOffset = Vector2.new(804,124)
 				Window.Video:Play()
 			else
-				ControlPanel.LinkInput.PlaceholderText = "VideoID (Failed)"
+				MenuWindow.LinkInput.PlaceholderText = "VideoID (Failed)"
 				Window.Title.Text = "Videoplayer"
 				Window.Video.Video = ""
 			end
         else
-            ControlPanel.LinkInput.Text = ""
+            MenuWindow.LinkInput.Text = ""
             Window.Video.Video = getsynasset("videos/" .. VideoId .. ".webm")
 			Window.Title.Text = "Videoplayer - videos/" .. VideoId .. ".webm"
-            ControlPanel.LinkInput.PlaceholderText = "VideoID"
+            MenuWindow.LinkInput.PlaceholderText = "VideoID"
 
 			Settings.Playing = true
 			ControlPanel.Play.ImageRectOffset = Vector2.new(804,124)
@@ -180,18 +190,10 @@ local function LoadVideo(Enter)
         end
 	end
 end
-
-local function Slide(Input)
-	local Length = Window.Video.TimeLength
-	local Size = UDim2.new(math.clamp((Input.Position.X - Window.Playback.AbsolutePosition.X) / Window.Playback.AbsoluteSize.X,0,1),0,1,0)
-	local TimePosition = ((Size.X.Scale * Length) / Length) * (Length - 0) + 0
-	Window.Playback.Line.Size = Size
-	Window.Video.TimePosition = TimePosition
-end
-
+Window.Playback.Slider.MouseButton1Click:Connect(ChangeTimePosition)
 ControlPanel.Play.MouseButton1Click:Connect(PlayVideo)
 ControlPanel.Expand.MouseButton1Click:Connect(Expand)
-ControlPanel.LinkInput.FocusLost:Connect(LoadVideo)
+MenuWindow.LinkInput.FocusLost:Connect(LoadVideo)
 Window.Video.Loaded:Connect(UpdateLength)
 Window.Video.Ended:Connect(function()
 	Settings.Playing = false
@@ -199,25 +201,11 @@ Window.Video.Ended:Connect(function()
 	ControlPanel.Play.ImageRectOffset = Vector2.new(764,244)
 end)
 
-Window.Playback.Slider.InputBegan:Connect(function(Input)
-	if Input.UserInputType == Enum.UserInputType.MouseButton1 then
-		Slide(Input)
-		Settings.Sliding = true
-	end
-end)
-
-Window.Playback.Slider.InputEnded:Connect(function(Input)
-	if Input.UserInputType == Enum.UserInputType.MouseButton1 then
-		Settings.Playing = true
-		Settings.Sliding = false
-		ControlPanel.Play.ImageRectOffset = Vector2.new(804,124)
-		Window.Video:Play()
-	end
-end)
-
-UserInputService.InputChanged:Connect(function(Input)
-	if Settings.Sliding and Input.UserInputType == Enum.UserInputType.MouseMovement then
-		Slide(Input)
+Window.Menu.MouseButton1Click:Connect(function()
+	if MenuWindow.Visible then
+		MenuWindow.Visible = false
+	else
+		MenuWindow.Visible = true
 	end
 end)
 
