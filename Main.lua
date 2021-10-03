@@ -3,12 +3,18 @@ local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
 local CoreGui = game:GetService("CoreGui")
 
-local Screen = game:GetObjects("rbxassetid://7563729664")[1]
+local RobloxPanel = CoreGui.ThemeProvider.TopBarFrame.LeftFrame
+local Folder = game:GetObjects("rbxassetid://7563729664")[1]
 
-Screen.Parent = CoreGui
+local PanelButton = Folder.VideoButton
+local Screen = Folder.Videoplayer
 local Window = Screen.Window
-local MenuWindow = Window.MenuWindow
 local ControlPanel = Window.ControlPanel
+
+PanelButton.Name = HttpService:GenerateGUID(false)
+PanelButton.Parent = RobloxPanel
+Screen.Name = HttpService:GenerateGUID(false)
+Screen.Parent = CoreGui
 
 if not isfolder("videos") then
 	makefolder("videos")
@@ -147,7 +153,7 @@ local function Expand()
 		if Settings.Expand then
 			Settings.DefaultSize = Window.Size
 			ControlPanel.Expand.ImageRectOffset = Vector2.new(244, 204)
-			Window.Size = UDim2.new(0,Window.Video.Resolution.X + 10,0,Window.Video.Resolution.Y + 115)
+			Window.Size = UDim2.new(0,Window.Video.Resolution.X + 10,0,Window.Video.Resolution.Y + 110)
 			Window.Resize.Visible = false
 		else
 			ControlPanel.Expand.ImageRectOffset = Vector2.new(724, 204)
@@ -159,30 +165,30 @@ end
 
 local function LoadVideo(Enter)
 	if Enter then
-        local VideoId = MenuWindow.LinkInput.Text
+        local VideoId = ControlPanel.LinkInput.Text
         if not isfile("videos/" .. VideoId .. ".webm") then
-            MenuWindow.LinkInput.Text = ""
-            MenuWindow.LinkInput.PlaceholderText = "VideoID (Loading)"
+            ControlPanel.LinkInput.Text = ""
+            ControlPanel.LinkInput.PlaceholderText = "VideoID (Loading)"
             local Video = Request(VideoId)
 			if Video then
 				writefile("videos/" .. VideoId .. ".webm", Video)
 				Window.Video.Video = getsynasset("videos/" .. VideoId .. ".webm")
 				Window.Title.Text = "Videoplayer - videos/" .. VideoId .. ".webm"
-				MenuWindow.LinkInput.PlaceholderText = "VideoID"
+				ControlPanel.LinkInput.PlaceholderText = "VideoID"
 
 				Settings.Playing = true
 				ControlPanel.Play.ImageRectOffset = Vector2.new(804,124)
 				Window.Video:Play()
 			else
-				MenuWindow.LinkInput.PlaceholderText = "VideoID (Failed)"
+				ControlPanel.LinkInput.PlaceholderText = "VideoID (Failed)"
 				Window.Title.Text = "Videoplayer"
 				Window.Video.Video = ""
 			end
         else
-            MenuWindow.LinkInput.Text = ""
+            ControlPanel.LinkInput.Text = ""
             Window.Video.Video = getsynasset("videos/" .. VideoId .. ".webm")
 			Window.Title.Text = "Videoplayer - videos/" .. VideoId .. ".webm"
-            MenuWindow.LinkInput.PlaceholderText = "VideoID"
+            ControlPanel.LinkInput.PlaceholderText = "VideoID"
 
 			Settings.Playing = true
 			ControlPanel.Play.ImageRectOffset = Vector2.new(804,124)
@@ -190,22 +196,23 @@ local function LoadVideo(Enter)
         end
 	end
 end
+
 Window.Playback.Slider.MouseButton1Click:Connect(ChangeTimePosition)
 ControlPanel.Play.MouseButton1Click:Connect(PlayVideo)
 ControlPanel.Expand.MouseButton1Click:Connect(Expand)
-MenuWindow.LinkInput.FocusLost:Connect(LoadVideo)
+ControlPanel.LinkInput.FocusLost:Connect(LoadVideo)
 Window.Video.Loaded:Connect(UpdateLength)
+
 Window.Video.Ended:Connect(function()
 	Settings.Playing = false
 	Window.Video.TimePosition = 0
 	ControlPanel.Play.ImageRectOffset = Vector2.new(764,244)
 end)
-
-Window.Menu.MouseButton1Click:Connect(function()
-	if MenuWindow.Visible then
-		MenuWindow.Visible = false
+PanelButton.Icon.MouseButton1Click:Connect(function()
+	if Window.Visible then
+		Window.Visible = false
 	else
-		MenuWindow.Visible = true
+		Window.Visible = true
 	end
 end)
 
