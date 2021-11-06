@@ -1,5 +1,5 @@
 # Roblox-Videoplayer
-https://alexserver.herokuapp.com
+https://alexserver.herokuapp.com/youtube
 
 ![how should video id look like](https://i.imgur.com/qBhtoMX.png)
 ```lua
