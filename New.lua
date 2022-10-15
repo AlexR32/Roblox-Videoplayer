@@ -9,14 +9,11 @@ local CoreGui = game:GetService("CoreGui")
 local Debug,LocalPlayer = false,PlayerService.LocalPlayer
 local AssetFolder = Debug and ReplicatedStorage.VideoPlayer
 or InsertService:LoadLocalAsset("rbxassetid://7563729664")
-
 local RobloxPanel = CoreGui.ThemeProvider.TopBarFrame.LeftFrame
 
-local Request = request
-or (http and http.request)
-or (syn and syn.request)
-
-local GetAsset = getcustomasset or getsynasset
+local GetAsset = getsynasset or getcustomasset
+local Request = (syn and syn.request)
+or (http and http.request) or request
 
 local PanelButton = AssetFolder.VideoButton
 local Screen = AssetFolder.Videoplayer
