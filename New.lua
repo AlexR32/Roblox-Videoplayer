@@ -1,22 +1,17 @@
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 local InsertService = game:GetService("InsertService")
 local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
-local PlayerService = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
 
-local Debug,LocalPlayer = false,PlayerService.LocalPlayer
-local AssetFolder = Debug and ReplicatedStorage.VideoPlayer
-or InsertService:LoadLocalAsset("rbxassetid://7563729664")
+local AssetFolder = InsertService:LoadLocalAsset("rbxassetid://7563729664")
+local Request = request or (http and http.request) or (syn and syn.request)
+local GetAsset = getcustomasset or getsynasset
+
 local RobloxPanel = CoreGui.ThemeProvider.TopBarFrame.LeftFrame
-
-local GetAsset = getsynasset or getcustomasset
-local Request = (syn and syn.request)
-or (http and http.request) or request
-
 local PanelButton = AssetFolder.VideoButton
 local Screen = AssetFolder.Videoplayer
+
 local Window = Screen.Window
 local ControlPanel = Window.ControlPanel
 
@@ -95,15 +90,8 @@ local function MakeResizeable(Dragger,Object,MinSize,Callback)
 end
 
 local function RequestVideo(VideoId)
-	local Responce = Request({
-		Url = Settings.Domain .. "youtube",
-		Method = "POST",
-		Headers = {
-			["Content-Type"] = "application/json"
-		},
-		Body = HttpService:JSONEncode({
-			["videoId"] = VideoId,
-		})
+	local Responce = Request({Method = "POST",
+		Url = Settings.Domain .. "yt/video?videoId=" .. VideoId,
 	})
 	if Responce.StatusCode == 404 then return false end
 	return Responce.Body
