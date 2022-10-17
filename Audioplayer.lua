@@ -82,10 +82,9 @@ local function RequestVideo(VideoId)
 	return Responce.Body
 end
 
-local function ChangeTimePosition()
-	--local Length = Audio.TimeLength
+local function ChangeTimePosition() local Length = Audio.TimeLength
 	local Size = UDim2.new(math.clamp((UserInputService:GetMouseLocation().X - Window.Playback.AbsolutePosition.X) / Window.Playback.AbsoluteSize.X,0,1),0,1,0)
-	local TimePosition = Audio.TimeLength / Size.X.Scale --((Size.X.Scale * Length) / Length) * Length
+	local TimePosition = ((Size.X.Scale * Length) / Length) * Length
 	ControlPanel.Play.ImageRectOffset = Vector2.new(804,124)
 	Audio.TimePosition = TimePosition
 	Window.Playback.Line.Size = Size
@@ -123,7 +122,7 @@ local function PlayAudio(Toggle)
 	Settings.Playing = Toggle
 	if Settings.Playing then
 		ControlPanel.Play.ImageRectOffset = Vector2.new(804,124)
-		Audio:Play()
+		Audio:Resume()
 	else
 		ControlPanel.Play.ImageRectOffset = Vector2.new(764,244)
 		Audio:Pause()
