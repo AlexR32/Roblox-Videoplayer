@@ -20,20 +20,25 @@ app.post('/yt/video', async (req, res) => {
     let videoURL = 'https://youtu.be/' + req.query.videoId
     let validURL = ytdl.validateURL(videoURL)
 
-    if (validURL) { let info = await ytdl.getInfo(videoURL)
-        if (isCorrectItag(info, 247)) {
-            let video = ytdl.downloadFromInfo(info, { quality: 247 })
-            let audio = ytdl.downloadFromInfo(info, { quality: 'highestaudio' })
-            console.log(`${new Date().toLocaleString()} | downloading ${videoURL}`)
-            let ffmpegProcess = childProcess.spawn(ffmpeg, ['-loglevel', 'quiet',
-                '-i', 'pipe:0', '-i', 'pipe:1', '-map', '0:v', '-map', '1:a',
-                '-metadata','duration=' + info.videoDetails.lengthSeconds,
-                '-c:v', 'copy', '-f', 'webm', '-shortest', 'pipe:2'
-            ])
-            video.pipe(ffmpegProcess.stdio[0])
-            audio.pipe(ffmpegProcess.stdio[1])
-            ffmpegProcess.stdio[2].pipe(res)
-        } else { res.sendStatus(404) }
+    if (validURL) { try {
+            let info = await ytdl.getInfo(videoURL)
+            if (isCorrectItag(info, 247)) {
+                let video = ytdl.downloadFromInfo(info, { quality: 247 })
+                let audio = ytdl.downloadFromInfo(info, { quality: 'highestaudio' })
+                console.log(`${new Date().toLocaleString()} | downloading ${videoURL}`)
+                let ffmpegProcess = childProcess.spawn(ffmpeg, ['-loglevel', 'quiet',
+                    '-i', 'pipe:0', '-i', 'pipe:1', '-map', '0:v', '-map', '1:a',
+                    '-metadata','duration=' + info.videoDetails.lengthSeconds,
+                    '-c:v', 'copy', '-f', 'webm', '-shortest', 'pipe:2'
+                ])
+                video.pipe(ffmpegProcess.stdio[0])
+                audio.pipe(ffmpegProcess.stdio[1])
+                ffmpegProcess.stdio[2].pipe(res)
+            } else { res.sendStatus(404) }
+        } catch(err) {
+            console.log('WEMB ERR - ' + err)
+            res.sendStatus(404)
+        }
     } else { res.sendStatus(404) }
 })
 
@@ -42,14 +47,19 @@ app.post('/yt/audio', async (req, res) => {
     let videoURL = 'https://youtu.be/' + req.query.videoId
     let validURL = ytdl.validateURL(videoURL)
 
-    if (validURL) { let info = await ytdl.getInfo(videoURL)
-        let audio = ytdl.downloadFromInfo(info, { quality: 'highestaudio' })
-        console.log(`${new Date().toLocaleString()} | downloading ${videoURL}`)
-        let ffmpegProcess = childProcess.spawn(ffmpeg, ['-loglevel', 'quiet',
-            '-i', 'pipe:0', '-f', 'mp3', 'pipe:1'
-        ])
-        audio.pipe(ffmpegProcess.stdio[0])
-        ffmpegProcess.stdio[1].pipe(res)
+    if (validURL) { try {
+            let info = await ytdl.getInfo(videoURL)
+            let audio = ytdl.downloadFromInfo(info, { quality: 'highestaudio' })
+            console.log(`${new Date().toLocaleString()} | downloading ${videoURL}`)
+            let ffmpegProcess = childProcess.spawn(ffmpeg, ['-loglevel', 'quiet',
+                '-i', 'pipe:0', '-f', 'mp3', 'pipe:1'
+            ])
+            audio.pipe(ffmpegProcess.stdio[0])
+            ffmpegProcess.stdio[1].pipe(res)
+        } catch(err) {
+            console.log('MP3 ERR - ' + err)
+            res.sendStatus(404)
+        }
     } else { res.sendStatus(404) }
 })
 
