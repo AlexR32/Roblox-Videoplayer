@@ -1,5 +1,5 @@
 # Roblox-Videoplayer
-Upload YouTube videos to Roblox to watch through this great script!  
+Download YouTube videos and watch them directly in Roblox with this awesome script!
 Using NodeJS and some modules for backend to convert videos to roblox format  
 Limits: Video should be minimum 720p
 
