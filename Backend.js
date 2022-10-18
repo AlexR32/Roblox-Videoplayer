@@ -5,7 +5,7 @@ const ytdl = require('ytdl-core')
 
 const app = express()
 app.use(express.json())
-const port = process.env.PORT || 80
+const port = process.env.PORT || 8080
 
 function isCorrectItag(info, itag) {
     for (i in info.formats) {
@@ -24,11 +24,11 @@ app.post('/yt/video', async (req, res) => {
         if (isCorrectItag(info, 247)) {
             let video = ytdl.downloadFromInfo(info, { quality: 247 })
             let audio = ytdl.downloadFromInfo(info, { quality: 'highestaudio' })
-            let ffmpegProcess = childProcess.spawn(ffmpeg, [
-                '-loglevel', '8', '-hide_banner',
+            console.log(`${new Date().toLocaleString()} | downloading ${videoURL}`)
+            let ffmpegProcess = childProcess.spawn(ffmpeg, ['-loglevel', 'quiet',
                 '-i', 'pipe:0', '-i', 'pipe:1', '-map', '0:v', '-map', '1:a',
                 '-metadata','duration=' + info.videoDetails.lengthSeconds,
-                '-c:v', 'copy', '-f', 'webm', 'pipe:2'
+                '-c:v', 'copy', '-f', 'webm', '-shortest', 'pipe:2'
             ])
             video.pipe(ffmpegProcess.stdio[0])
             audio.pipe(ffmpegProcess.stdio[1])
@@ -44,8 +44,8 @@ app.post('/yt/audio', async (req, res) => {
 
     if (validURL) { let info = await ytdl.getInfo(videoURL)
         let audio = ytdl.downloadFromInfo(info, { quality: 'highestaudio' })
-        let ffmpegProcess = childProcess.spawn(ffmpeg, [
-            '-loglevel', '8', '-hide_banner',
+        console.log(`${new Date().toLocaleString()} | downloading ${videoURL}`)
+        let ffmpegProcess = childProcess.spawn(ffmpeg, ['-loglevel', 'quiet',
             '-i', 'pipe:0', '-f', 'mp3', 'pipe:1'
         ])
         audio.pipe(ffmpegProcess.stdio[0])
