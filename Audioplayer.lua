@@ -1,51 +1,39 @@
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
+-- Repeat On = rbxassetid://6026666994
+-- Repeat Off = rbxassetid://6026666998
+-- Play = rbxassetid://6026663699
+-- Pause = rbxassetid://6026663719
+-- Menu = rbxassetid://6031097225
+
 local UserInputService = game:GetService("UserInputService")
 local InsertService = game:GetService("InsertService")
 local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
-local PlayerService = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
 
-local Debug,LocalPlayer = false,PlayerService.LocalPlayer
-local AssetFolder = Debug and ReplicatedStorage.VideoPlayer
-or InsertService:LoadLocalAsset("rbxassetid://7563729664")
-
-local RobloxPanel = CoreGui.ThemeProvider.TopBarFrame.LeftFrame
-
-local Request = request
-or (http and http.request)
-or (syn and syn.request)
-
+local AssetFolder = InsertService:LoadLocalAsset("rbxassetid://11312132580")
+local Request = request or (http and http.request) or (syn and syn.request)
 local GetAsset = getcustomasset or getsynasset
 
-local PanelButton = AssetFolder.VideoButton
-local Screen = AssetFolder.Videoplayer
-local Window = Screen.Window
-local ControlPanel = Window.ControlPanel
+local RobloxPanel = CoreGui.ThemeProvider.TopBarFrame.LeftFrame
+local PanelButton = AssetFolder.AudioPlayer:Clone()
+local Screen = AssetFolder.Screen:Clone()
 
 PanelButton.Name = HttpService:GenerateGUID(false)
 PanelButton.Parent = RobloxPanel
+
 Screen.Name = HttpService:GenerateGUID(false)
 Screen.Parent = CoreGui
 
--- Videoplayer to Audioplayer
-Window.Video.Visible = false
-Window.Resize.Visible = false
-Window.Title.Text = "Audioplayer"
-ControlPanel.Expand.Visible = false
-Window.Size = UDim2.new(0,310,0,105)
+local Window = Screen.Window
+local Audio = Window.Sound
+local Title = Window.Title
+local Playback = Window.Playback
+local ControlPanel = Window.ControlPanel
 
-local Audio = Instance.new("Sound")
-Audio.Parent = Window
-
-
+local Domain = "https://parvus.fun/"
 if not isfolder("audios") then
 	makefolder("audios")
 end
-
-local Settings = {Playing = false,
-	Domain = "https://parvus.fun/"
-}
 
 local function MakeDraggable(Dragger,Object,Callback)
 	local StartPosition,StartDrag = nil,nil
@@ -76,24 +64,14 @@ end
 
 local function RequestVideo(VideoId)
 	local Responce = Request({Method = "POST",
-		Url = Settings.Domain .. "yt/audio?videoId=" .. VideoId,
-	})
-	if Responce.StatusCode == 404 then return false end
+		Url = Domain .. "yt/audio?videoId=" .. VideoId
+	}) if Responce.StatusCode == 404 then return false end
 	return Responce.Body
-end
-
-local function ChangeTimePosition() local Length = Audio.TimeLength
-	local Size = UDim2.new(math.clamp((UserInputService:GetMouseLocation().X - Window.Playback.AbsolutePosition.X) / Window.Playback.AbsoluteSize.X,0,1),0,1,0)
-	local TimePosition = ((Size.X.Scale * Length) / Length) * Length
-	ControlPanel.Play.ImageRectOffset = Vector2.new(804,124)
-	Audio.TimePosition = TimePosition
-	Window.Playback.Line.Size = Size
-	Settings.Playing = true Audio:Play()
 end
 
 local function UpdateTime()
 	local TimePosition = Audio.TimePosition
-	Window.Playback.Time.Text = string.format(
+	Playback.Time.Text = string.format(
 		"%02i:%02i:%02i",
 		TimePosition/60^2,
 		TimePosition/60%60,
@@ -103,7 +81,7 @@ end
 
 local function UpdateLength()
 	local TimeLength = Audio.TimeLength
-	Window.Playback.Length.Text = string.format(
+	Playback.Length.Text = string.format(
 		"%02i:%02i:%02i",
 		TimeLength/60^2,
 		TimeLength/60%60,
@@ -112,68 +90,69 @@ local function UpdateLength()
 end
 
 local function UpdatePlayback()
-	local TimePosition = Audio.TimePosition
-	local TimeLength = Audio.TimeLength
-	local TimePercent = TimePosition / TimeLength
-	Window.Playback.Line.Size = UDim2.new(TimePercent,0,1,0)
+	Playback.Line.Size = UDim2.new(Audio.TimePosition / Audio.TimeLength,0,1,0)
 end
 
-local function PlayAudio(Toggle)
-	Settings.Playing = Toggle
-	if Settings.Playing then
-		ControlPanel.Play.ImageRectOffset = Vector2.new(804,124)
-		Audio:Resume()
-	else
-		ControlPanel.Play.ImageRectOffset = Vector2.new(764,244)
-		Audio:Pause()
+local function ChangePlayback()
+	local Position = math.clamp((UserInputService:GetMouseLocation().X - Playback.AbsolutePosition.X) / Playback.AbsoluteSize.X,0,1)
+	Audio.TimePosition = math.clamp(Audio.TimeLength * Position,0,Audio.TimeLength) UpdateTime() UpdatePlayback()
+end
+
+local function AudioMode(Mode)
+	if Mode == "Play" then Audio.TimePosition = 0 Audio:Play()
+		ControlPanel.Play.Image = "rbxassetid://6026663719"
+		PanelButton.Icon.Image = "rbxassetid://6026663719"
+	elseif Mode == "Resume" then Audio:Resume()
+		ControlPanel.Play.Image = "rbxassetid://6026663719"
+		PanelButton.Icon.Image = "rbxassetid://6026663719"
+	elseif Mode == "Stop" then Audio:Stop()
+		ControlPanel.Play.Image = "rbxassetid://6026663699"
+		PanelButton.Icon.Image = "rbxassetid://6026663699"
+	elseif Mode == "Pause" then Audio:Pause()
+		ControlPanel.Play.Image = "rbxassetid://6026663699"
+		PanelButton.Icon.Image = "rbxassetid://6026663699"
+	elseif Mode == "LoopOn" then Audio.Looped = true
+		ControlPanel.Repeat.Image = "rbxassetid://6026666994"
+	elseif Mode == "LoopOff" then Audio.Looped = false
+		ControlPanel.Repeat.Image = "rbxassetid://6026666998"
 	end
 end
 
 local function LoadAudio(Enter)
 	if Enter then
 		local VideoId = ControlPanel.LinkInput.Text
+		ControlPanel.LinkInput.PlaceholderText = "Video ID (Loading)"
+		ControlPanel.LinkInput.Text = ""
+
 		if not isfile("audios/" .. VideoId .. ".mp3") then
-			ControlPanel.LinkInput.PlaceholderText = "VideoID (Loading)"
-			ControlPanel.LinkInput.Text = ""
-			local Video = RequestVideo(VideoId)
-			if Video then
+			local Video = RequestVideo(VideoId) if Video then
 				writefile("audios/" .. VideoId .. ".mp3", Video)
 				Audio.SoundId = GetAsset("audios/" .. VideoId .. ".mp3")
-				Window.Title.Text = "Audioplayer - audios/" .. VideoId .. ".mp3"
-				ControlPanel.LinkInput.PlaceholderText = "VideoID"
-				PlayAudio(true)
+				Title.Text = "Audio Player - audios/" .. VideoId .. ".mp3"
+				ControlPanel.LinkInput.PlaceholderText = "Video ID"
+				AudioMode("Play")
 			else
-				ControlPanel.LinkInput.PlaceholderText = "VideoID (Failed)"
-				Window.Title.Text = "Audioplayer"
-				Audio.SoundId = ""
-				PlayAudio(false)
+				ControlPanel.LinkInput.PlaceholderText = "Video ID (Failed)"
+				Window.Title.Text = "Audio Player" AudioMode("Stop")
 			end
 		else
-			ControlPanel.LinkInput.Text = ""
+			ControlPanel.LinkInput.PlaceholderText = "Video ID"
 			Audio.SoundId = GetAsset("audios/" .. VideoId .. ".mp3")
-			Window.Title.Text = "Audioplayer - audios/" .. VideoId .. ".mp3"
-			ControlPanel.LinkInput.PlaceholderText = "VideoID"
-			PlayAudio(true)
+			Window.Title.Text = "Audio Player - audios/" .. VideoId .. ".mp3"
+			AudioMode("Play")
 		end
 	end
 end
 
-Window.Playback.Slider.MouseButton1Click:Connect(ChangeTimePosition)
+Window.Playback.Slider.MouseButton1Click:Connect(ChangePlayback)
 ControlPanel.LinkInput.FocusLost:Connect(LoadAudio)
 ControlPanel.Play.MouseButton1Click:Connect(function()
-	PlayAudio(not Settings.Playing)
-end)
-
-Audio.Loaded:Connect(UpdateLength)
-Audio.Ended:Connect(function()
-	PlayAudio(false) Window.Video.TimePosition = 0
-end)
-PanelButton.Icon.MouseButton1Click:Connect(function()
+	AudioMode(not Audio.Playing and "Resume" or "Pause")
+end) ControlPanel.Repeat.MouseButton1Click:Connect(function()
+	AudioMode(Audio.Looped and "LoopOff" or "LoopOn")
+end) RunService.RenderStepped:Connect(function()
+	if Audio.Playing then UpdateTime() UpdatePlayback() end
+end) PanelButton.Icon.MouseButton1Click:Connect(function()
 	Window.Visible = not Window.Visible
-end)
-
-RunService.RenderStepped:Connect(function()
-	UpdateTime() UpdatePlayback()
-end)
-
-MakeDraggable(Window.Title,Window)
+end) Audio.Loaded:Connect(UpdateLength)
+MakeDraggable(Title,Window)
