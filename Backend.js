@@ -7,7 +7,7 @@ const app = express()
 app.use(express.json())
 const port = process.env.PORT || 8080
 
-function isCorrectItag(info, itag) {
+function itagExists(info, itag) {
     for (i in info.formats) {
         if (info.formats[i].itag === itag) {
             return true
@@ -20,9 +20,8 @@ app.post('/yt/video', async (req, res) => {
     let videoURL = 'https://youtu.be/' + req.query.videoId
     let validURL = ytdl.validateURL(videoURL)
 
-    if (validURL) { try {
-            let info = await ytdl.getInfo(videoURL)
-            if (isCorrectItag(info, 247)) {
+    if (validURL) { try { let info = await ytdl.getInfo(videoURL)
+            if (itagExists(info, 247)) {
                 let video = ytdl.downloadFromInfo(info, { quality: 247 })
                 let audio = ytdl.downloadFromInfo(info, { quality: 'highestaudio' })
                 console.log(`${new Date().toLocaleString()} | downloading ${videoURL}`)
@@ -36,7 +35,7 @@ app.post('/yt/video', async (req, res) => {
                 ffmpegProcess.stdio[2].pipe(res)
             } else { res.sendStatus(404) }
         } catch(err) {
-            console.log('WEMB ERR - ' + err)
+            console.log('WEBM ERR - ' + err)
             res.sendStatus(404)
         }
     } else { res.sendStatus(404) }
@@ -47,9 +46,7 @@ app.post('/yt/audio', async (req, res) => {
     let videoURL = 'https://youtu.be/' + req.query.videoId
     let validURL = ytdl.validateURL(videoURL)
 
-    if (validURL) { try {
-            let info = await ytdl.getInfo(videoURL)
-            let audio = ytdl.downloadFromInfo(info, { quality: 'highestaudio' })
+    if (validURL) { try { let audio = ytdl(videoURL, { quality: 'highestaudio' })
             console.log(`${new Date().toLocaleString()} | downloading ${videoURL}`)
             let ffmpegProcess = childProcess.spawn(ffmpeg, ['-loglevel', 'quiet',
                 '-i', 'pipe:0', '-f', 'mp3', 'pipe:1'
