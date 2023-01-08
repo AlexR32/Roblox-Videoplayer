@@ -1,10 +1,10 @@
 # Roblox-Videoplayer
 Download YouTube videos and watch them directly in Roblox with this awesome script!  
 Using NodeJS and some modules for backend to convert videos to roblox format  
-Limits: Video should be minimum 720p
+Limits: Video should be without age restrictions and should be not hidden or blocked
 
 How should Video ID look like (You should copy part from red box):  
-![how should video id look like](https://i.imgur.com/qBhtoMX.png)
+![How should Video ID look like](https://i.imgur.com/qBhtoMX.png)
 
 Video Player:
 ```lua
